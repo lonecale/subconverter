@@ -190,7 +190,7 @@ static int curlGet(const FetchArgument &argument, FetchResult &result)
     curl_progress_data limit;
     limit.size_limit = global.maxAllowedDownloadSize;
     curl_set_common_options(curl_handle, new_url.data(), &limit);
-    list = curl_slist_append(list, "Content-Type: application/json;charset='utf-8'");
+    list = curl_slist_append(list, "Content-Type: application/json;charset=utf-8");
     if(argument.request_headers)
     {
         for(auto &x : *argument.request_headers)
@@ -295,10 +295,10 @@ static int curlGet(const FetchArgument &argument, FetchResult &result)
 static std::string dataGet(const std::string &url)
 {
     if (!startsWith(url, "data:"))
-        return std::string();
+        return "";
     std::string::size_type comma = url.find(',');
     if (comma == std::string::npos || comma == url.size() - 1)
-        return std::string();
+        return "";
 
     std::string data = urlDecode(url.substr(comma + 1));
     if (endsWith(url.substr(0, comma), ";base64")) {

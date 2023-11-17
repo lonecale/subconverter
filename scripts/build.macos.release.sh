@@ -1,9 +1,9 @@
 #!/bin/bash
 set -xe
 
-brew reinstall rapidjson libevent zlib pcre2 pkgconfig
+brew reinstall rapidjson zlib pcre2 pkgconfig
 
-#git clone https://github.com/curl/curl --depth=1
+#git clone https://github.com/curl/curl --depth=1 --branch curl-7_88_1
 #cd curl
 #./buildconf > /dev/null
 #./configure --with-ssl=/usr/local/opt/openssl@1.1 --without-mbedtls --disable-ldap --disable-ldaps --disable-rtsp --without-libidn2 > /dev/null
@@ -21,7 +21,8 @@ git clone https://github.com/ftk/quickjspp --depth=1
 cd quickjspp
 cmake -DCMAKE_BUILD_TYPE=Release .
 make quickjs -j8
-install -m644 quickjs/libquickjs.a /usr/local/lib/
+install -d /usr/local/lib/quickjs/
+install -m644 quickjs/libquickjs.a /usr/local/lib/quickjs/
 install -d /usr/local/include/quickjs/
 install -m644 quickjs/quickjs.h quickjs/quickjs-libc.h /usr/local/include/quickjs/
 install -m644 quickjspp.hpp /usr/local/include/
@@ -31,7 +32,7 @@ git clone https://github.com/PerMalmberg/libcron --depth=1
 cd libcron
 git submodule update --init
 cmake -DCMAKE_BUILD_TYPE=Release .
-make libcron -j8
+make libcron install -j8
 install -m644 libcron/out/Release/liblibcron.a /usr/local/lib/
 install -d /usr/local/include/libcron/
 install -m644 libcron/include/libcron/* /usr/local/include/libcron/
@@ -41,18 +42,22 @@ cd ..
 
 git clone https://github.com/ToruNiina/toml11 --depth=1
 cd toml11
-cmake .
+cmake -DCMAKE_CXX_STANDARD=11 .
 make install -j4
 cd ..
 
-cp /usr/local/lib/libevent.a .
 cp /usr/local/opt/zlib/lib/libz.a .
 cp /usr/local/lib/libpcre2-8.a .
 
 cmake -DCMAKE_BUILD_TYPE=Release .
 make -j8
 rm subconverter
+# shellcheck disable=SC2046
 c++ -Xlinker -unexported_symbol -Xlinker "*" -o base/subconverter -framework CoreFoundation -framework Security $(find CMakeFiles/subconverter.dir/src/ -name "*.o") $(find . -name "*.a") -lcurl -O3
+
+python -m ensurepip
+python -m pip install gitpython
+python scripts/update_rules.py -c scripts/rules_config.conf
 
 cd base
 chmod +rx subconverter

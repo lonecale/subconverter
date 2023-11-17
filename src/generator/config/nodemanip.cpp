@@ -51,7 +51,7 @@ int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID, parse_
     link = replaceAllDistinct(link, "\"", "");
 
     /// script:filepath,arg1,arg2,...
-    script_safe_runner(parse_set.js_runtime, parse_set.js_context, [&](qjs::Context &ctx)
+    if(authorized) script_safe_runner(parse_set.js_runtime, parse_set.js_context, [&](qjs::Context &ctx)
     {
         if(startsWith(link, "script:")) /// process subscription with script
         {
@@ -68,7 +68,7 @@ int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID, parse_
                     switch(args.size())
                     {
                     case 0:
-                        link = parse(std::string(), string_array());
+                        link = parse("", string_array());
                         break;
                     case 1:
                         link = parse(args[0], string_array());
@@ -210,20 +210,20 @@ int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID, parse_
         for(Proxy &x : nodes)
         {
             x.GroupId = groupID;
-            if(custom_group.size())
+            if(!custom_group.empty())
                 x.Group = custom_group;
         }
         copyNodes(nodes, allNodes);
         break;
     default:
         explode(link, node);
-        if(node.Type == -1)
+        if(node.Type == ProxyType::Unknown)
         {
             writeLog(LOG_TYPE_ERROR, "No valid link found.");
             return -1;
         }
         node.GroupId = groupID;
-        if(custom_group.size())
+        if(!custom_group.empty())
             node.Group = custom_group;
         allNodes.emplace_back(std::move(node));
     }
@@ -380,7 +380,7 @@ void nodeRename(Proxy &node, const RegexMatchConfigs &rename_array, extra_settin
 
     for(const RegexMatchConfig &x : rename_array)
     {
-        if(!x.Script.empty())
+        if(!x.Script.empty() && ext.authorized)
         {
             script_safe_runner(ext.js_runtime, ext.js_context, [&](qjs::Context &ctx)
             {
@@ -432,7 +432,7 @@ std::string addEmoji(const Proxy &node, const RegexMatchConfigs &emoji_array, ex
 
     for(const RegexMatchConfig &x : emoji_array)
     {
-        if(!x.Script.empty())
+        if(!x.Script.empty() && ext.authorized)
         {
             std::string result;
             script_safe_runner(ext.js_runtime, ext.js_context, [&](qjs::Context &ctx)
@@ -481,7 +481,7 @@ void preprocessNodes(std::vector<Proxy> &nodes, extra_settings &ext)
     if(ext.sort_flag)
     {
         bool failed = true;
-        if(ext.sort_script.size())
+        if(ext.sort_script.size() && ext.authorized)
         {
             std::string script = ext.sort_script;
             if(startsWith(script, "path:"))
@@ -494,9 +494,9 @@ void preprocessNodes(std::vector<Proxy> &nodes, extra_settings &ext)
                     auto compare = (std::function<int(const Proxy&, const Proxy&)>) ctx.eval("compare");
                     auto comparer = [&](const Proxy &a, const Proxy &b)
                     {
-                        if(a.Type == ProxyType::Unknow)
+                        if(a.Type == ProxyType::Unknown)
                             return 1;
-                        if(b.Type == ProxyType::Unknow)
+                        if(b.Type == ProxyType::Unknown)
                             return 0;
                         return compare(a, b);
                     };

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
-#include <signal.h>
+#include <csignal>
 
 #include <sys/types.h>
 #include <dirent.h>
@@ -29,7 +29,7 @@ WebServer webServer;
 #ifndef _WIN32
 void SetConsoleTitle(const std::string &title)
 {
-    system(std::string("echo \"\\033]0;" + title + "\\007\\c\"").data());
+    system(std::string("echo \"\\033]0;" + title + R"(\007\c")").data());
 }
 #endif // _WIN32
 
@@ -46,10 +46,10 @@ void setcd(std::string &file)
     strrchr(szTemp, '\\')[1] = '\0';
 #else
     char *ret = realpath(file.data(), szTemp);
-    if(ret == NULL)
+    if(ret == nullptr)
         return;
     ret = strcpy(filename, strrchr(szTemp, '/') + 1);
-    if(ret == NULL)
+    if(ret == nullptr)
         return;
     strrchr(szTemp, '/')[1] = '\0';
 #endif // _WIN32
@@ -84,7 +84,7 @@ void chkArg(int argc, char *argv[])
         else if(strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--log") == 0)
         {
             if(i < argc - 1)
-                if(freopen(argv[++i], "a", stderr) == NULL)
+                if(freopen(argv[++i], "a", stderr) == nullptr)
                     std::cerr<<"Error redirecting output to file.\n";
         }
     }
@@ -169,9 +169,9 @@ int main(int argc, char *argv[])
 
     std::string env_api_mode = getEnv("API_MODE"), env_managed_prefix = getEnv("MANAGED_PREFIX"), env_token = getEnv("API_TOKEN");
     global.APIMode = tribool().parse(toLower(env_api_mode)).get(global.APIMode);
-    if(env_managed_prefix.size())
+    if(!env_managed_prefix.empty())
         global.managedConfigPrefix = env_managed_prefix;
-    if(env_token.size())
+    if(!env_token.empty())
         global.accessToken = env_token;
 
     if(global.generatorMode)
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 
     webServer.append_response("GET", "/refreshrules", "text/plain", [](RESPONSE_CALLBACK_ARGS) -> std::string
     {
-        if(global.accessToken.size())
+        if(!global.accessToken.empty())
         {
             std::string token = getUrlArg(request.argument, "token");
             if(token != global.accessToken)
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 
     webServer.append_response("GET", "/readconf", "text/plain", [](RESPONSE_CALLBACK_ARGS) -> std::string
     {
-        if(global.accessToken.size())
+        if(!global.accessToken.empty())
         {
             std::string token = getUrlArg(request.argument, "token");
             if(token != global.accessToken)
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 
     webServer.append_response("POST", "/updateconf", "text/plain", [](RESPONSE_CALLBACK_ARGS) -> std::string
     {
-        if(global.accessToken.size())
+        if(!global.accessToken.empty())
         {
             std::string token = getUrlArg(request.argument, "token");
             if(token != global.accessToken)
@@ -262,6 +262,8 @@ int main(int argc, char *argv[])
 
     webServer.append_response("GET", "/sub", "text/plain;charset=utf-8", subconverter);
 
+    webServer.append_response("HEAD", "/sub", "text/plain", subconverter);
+
     webServer.append_response("GET", "/sub2clashr", "text/plain;charset=utf-8", simpleToClashR);
 
     webServer.append_response("GET", "/surge2clash", "text/plain;charset=utf-8", surgeConfToClash);
@@ -270,13 +272,7 @@ int main(int argc, char *argv[])
 
     webServer.append_response("GET", "/getprofile", "text/plain;charset=utf-8", getProfile);
 
-    webServer.append_response("GET", "/qx-script", "text/plain;charset=utf-8", getScript);
-
-    webServer.append_response("GET", "/qx-rewrite", "text/plain;charset=utf-8", getRewriteRemote);
-
     webServer.append_response("GET", "/render", "text/plain;charset=utf-8", renderTemplate);
-
-    webServer.append_response("GET", "/convert", "text/plain;charset=utf-8", getConvertedRuleset);
 
     if(!global.APIMode)
     {
@@ -297,7 +293,7 @@ int main(int argc, char *argv[])
     //webServer.append_response("GET", "/list-profiles", "text/plain;charset=utf-8", listProfiles);
 
     std::string env_port = getEnv("PORT");
-    if(env_port.size())
+    if(!env_port.empty())
         global.listenPort = to_int(env_port, global.listenPort);
     listener_args args = {global.listenAddress, global.listenPort, global.maxPendingConns, global.maxConcurThreads, cron_tick_caller, 200};
     //std::cout<<"Serving HTTP @ http://"<<listen_address<<":"<<listen_port<<std::endl;

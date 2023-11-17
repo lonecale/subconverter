@@ -18,7 +18,7 @@ std::string hostnameToIPAddr(const std::string &host)
     if(retVal != 0)
     {
         freeaddrinfo(retAddrInfo);
-        return std::string();
+        return "";
     }
 
     for(cur = retAddrInfo; cur != NULL; cur = cur->ai_next)
@@ -146,6 +146,7 @@ std::string getFormData(const std::string &raw_data)
                 file.append(buffer, j);
                 j = 0;
             };
+            file.erase(file.length() - bl);
             break;
         }
         i++;
